@@ -135,38 +135,94 @@ impl Synthesizer {
             return;
         }
 
-        let channel_info = &mut self.channels[channel as usize];
-
         match command {
-            0x80 => self.note_off(channel, data1),       // Note Off
-            0x90 => self.note_on(channel, data1, data2), // Note On
-            0xB0 => match data1 // Controller
-            {
-                0x00 => channel_info.set_bank(data2), // Bank Selection
-                0x01 => channel_info.set_modulation_coarse(data2), // Modulation Coarse
-                0x21 => channel_info.set_modulation_fine(data2), // Modulation Fine
-                0x06 => channel_info.data_entry_coarse(data2), // Data Entry Coarse
-                0x26 => channel_info.data_entry_fine(data2), // Data Entry Fine
-                0x07 => channel_info.set_volume_coarse(data2), // Channel Volume Coarse
-                0x27 => channel_info.set_volume_fine(data2), // Channel Volume Fine
-                0x0A => channel_info.set_pan_coarse(data2), // Pan Coarse
-                0x2A => channel_info.set_pan_fine(data2), // Pan Fine
-                0x0B => channel_info.set_expression_coarse(data2), // Expression Coarse
-                0x2B => channel_info.set_expression_fine(data2), // Expression Fine
-                0x40 => channel_info.set_hold_pedal(data2), // Hold Pedal
-                0x5B => channel_info.set_reverb_send(data2), // Reverb Send
-                0x5D => channel_info.set_chorus_send(data2), // Chorus Send
-                0x65 => channel_info.set_rpn_coarse(data2), // RPN Coarse
-                0x64 => channel_info.set_rpn_fine(data2), // RPN Fine
-                0x78 => self.note_off_all_channel(channel, true), // All Sound Off
-                0x79 => self.reset_all_controllers_channel(channel), // Reset All Controllers
-                0x7B => self.note_off_all_channel(channel, false), // All Note Off
-                _ => (),
-            },
-            0xC0 => channel_info.set_patch(data1), // Program Change
-            0xE0 => channel_info.set_pitch_bend(data1, data2), // Pitch Bend
+            0x80 => self.note_off(channel, data1),          // Note Off
+            0x90 => self.note_on(channel, data1, data2),    // Note On
+            0xB0 => self.controller(channel, data1, data2), // Controller
+            0xC0 => self.program_change(channel, data1),    // Program Change
+            0xE0 => self.pitch_bend(channel, data1, data2), // Pitch Bend
             _ => (),
         }
+    }
+
+    /// Handles a controller message.
+    ///
+    /// # Arguments
+    ///
+    /// * `channel` - The channel to which the message will be sent.
+    /// * `controller` - The controller number.
+    /// * `value` - The value of the controller.
+    pub fn controller(&mut self, channel: i32, controller: i32, value: i32) {
+        if !(0 <= channel && channel < self.channels.len() as i32) {
+            return;
+        }
+
+        let channel_info = &mut self.channels[channel as usize];
+        match controller {
+            0x00 => channel_info.set_bank(value), // Bank Selection
+            0x01 => channel_info.set_modulation_coarse(value), // Modulation Coarse
+            0x21 => channel_info.set_modulation_fine(value), // Modulation Fine
+            0x06 => channel_info.data_entry_coarse(value), // Data Entry Coarse
+            0x26 => channel_info.data_entry_fine(value), // Data Entry Fine
+            0x07 => channel_info.set_volume_coarse(value), // Channel Volume Coarse
+            0x27 => channel_info.set_volume_fine(value), // Channel Volume Fine
+            0x0A => channel_info.set_pan_coarse(value), // Pan Coarse
+            0x2A => channel_info.set_pan_fine(value), // Pan Fine
+            0x0B => channel_info.set_expression_coarse(value), // Expression Coarse
+            0x2B => channel_info.set_expression_fine(value), // Expression Fine
+            0x40 => channel_info.set_hold_pedal(value), // Hold Pedal
+            0x5B => channel_info.set_reverb_send(value), // Reverb Send
+            0x5D => channel_info.set_chorus_send(value), // Chorus Send
+            0x65 => channel_info.set_rpn_coarse(value), // RPN Coarse
+            0x64 => channel_info.set_rpn_fine(value), // RPN Fine
+            0x78 => self.note_off_all_channel(channel, true), // All Sound Off
+            0x79 => self.reset_all_controllers_channel(channel), // Reset All Controllers
+            0x7B => self.note_off_all_channel(channel, false), // All Note Off
+            _ => (),
+        }
+    }
+
+    /// Handles a program change message.
+    ///
+    /// # Arguments
+    ///
+    /// * `channel` - The channel to which the message will be sent.
+    /// * `patch` - The patch number.
+    pub fn program_change(&mut self, channel: i32, patch: i32) {
+        if !(0 <= channel && channel < self.channels.len() as i32) {
+            return;
+        }
+
+        self.channels[channel as usize].set_patch(patch);
+    }
+
+    /// Handles a pitch bend message.
+    ///
+    /// # Arguments
+    ///
+    /// * `channel` - The channel to which the message will be sent.
+    /// * `value1` - The first data part of the message.
+    /// * `value2` - The second data part of the message.
+    pub fn pitch_bend(&mut self, channel: i32, value1: i32, value2: i32) {
+        if !(0 <= channel && channel < self.channels.len() as i32) {
+            return;
+        }
+
+        self.channels[channel as usize].set_pitch_bend(value1, value2);
+    }
+
+    /// Handles setting the pitch bend with a floating point value.
+    ///
+    /// # Arguments
+    ///
+    /// * `channel` - The channel to which the message will be sent.
+    /// * `value` - The value of the pitch bend.
+    pub fn pitch_bend_f32(&mut self, channel: i32, value: f32) {
+        if !(0 <= channel && channel < self.channels.len() as i32) {
+            return;
+        }
+
+        self.channels[channel as usize].set_pitch_bend_f32(value);
     }
 
     /// Stops a note.
